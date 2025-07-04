@@ -14,6 +14,7 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import com.example.demo.model.Message;
+import com.example.demo.session.MessageListener;
 import com.example.demo.session.MyStompSessionHandler;
 
 
@@ -24,7 +25,7 @@ public class MyStompClient {
 	private StompSession session;
 	private String username;
 	
-	public  MyStompClient(String username) throws InterruptedException, ExecutionException {
+	public  MyStompClient(MessageListener messageListener ,String username) throws InterruptedException, ExecutionException {
 		this.username = username;
 		
 		List<Transport> transports = new ArrayList<>();
@@ -35,7 +36,7 @@ public class MyStompClient {
 		
 		stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 		
-		StompSessionHandler sessionHandler = new MyStompSessionHandler(username);
+		StompSessionHandler sessionHandler = new MyStompSessionHandler(messageListener , username);
 		String url = "ws://localhost:8080/ws";
 		
 		session = stompClient.connectAsync(url, sessionHandler).get();
@@ -48,5 +49,11 @@ public class MyStompClient {
 		}catch(Exception e ) {
 			 e.printStackTrace();
 		}
+	}
+
+	public void disconnectedUser(String username) {
+		session.send("/app/disconnect", username);
+		System.out.println("Disconnect User : " + username);
+		
 	}
 }
