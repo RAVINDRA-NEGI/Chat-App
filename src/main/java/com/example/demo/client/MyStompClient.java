@@ -16,6 +16,9 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import com.example.demo.model.Message;
 import com.example.demo.session.MessageListener;
 import com.example.demo.session.MyStompSessionHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 
 
@@ -34,8 +37,14 @@ public class MyStompClient {
 		SockJsClient sockJsClient = new SockJsClient(transports);
 		WebSocketStompClient stompClient = new WebSocketStompClient(sockJsClient);
 		
-		stompClient.setMessageConverter(new MappingJackson2MessageConverter());
-		
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.registerModule(new JavaTimeModule());
+		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+		converter.setObjectMapper(objectMapper);
+		stompClient.setMessageConverter(converter);
+
 		StompSessionHandler sessionHandler = new MyStompSessionHandler(messageListener , username);
 		String url = "ws://localhost:8080/ws";
 		

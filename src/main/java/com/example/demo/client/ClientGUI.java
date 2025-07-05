@@ -1,226 +1,222 @@
 package com.example.demo.client;
 
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.*;
+import java.awt.event.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.BoxLayout;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import com.example.demo.model.Message;
 import com.example.demo.session.MessageListener;
+import com.example.demo.util.Utilities;
 
+public class ClientGUI extends JFrame implements MessageListener {
+    private JPanel connectedUsersPanel, messagePanel, userListPanel;
+    private MyStompClient myStompClient;
+    private String username;
+    private JScrollPane messagePaneScrollPane;
 
-public class ClientGUI extends JFrame implements MessageListener{
-	private JPanel connectedUsersPanel, messagePanel;
-	private MyStompClient myStompClient;
-	private String username;
-	private JScrollPane messagePaneScrollPane;
-	
-	public ClientGUI(String username ) throws InterruptedException, ExecutionException {
-		super("User: " + username);
-		this.username = username;
-		myStompClient =  new MyStompClient( this,username);
-		
-		setSize(1121 , 685);
-		setLocationRelativeTo(null);
-		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-		addWindowListener(new WindowAdapter() {
-		
-		@Override
-		 public void windowClosing(WindowEvent e) {
-			int option = JOptionPane.showConfirmDialog(ClientGUI.this, "Do you really want to leave?",
-				"Exit", JOptionPane.YES_NO_OPTION	);
-			if(option == JOptionPane.YES_OPTION) {
-				myStompClient.disconnectedUser(username);
-				ClientGUI.this.dispose();
-			}
-		}
+    public ClientGUI(String username) throws InterruptedException, ExecutionException {
+        super("User: " + username);
+        this.username = username;
+        myStompClient = new MyStompClient(this, username);
 
-		});
-		
-		addComponentListener(new  ComponentAdapter() {
-			@Override
-			public void componentResized(ComponentEvent e) {
-				updateMessageSize();
-			}
-		});
-		
-		getContentPane().setBackground(Utilitities.PRIMARY_COLOR);
-		addGUIComponents();
-	}
-	
-	private void addGUIComponents() {
-		addConnectedUsersComponents();
-		addChatComponents();
-		
-	}
-	
-	private void addConnectedUsersComponents() {
-		connectedUsersPanel = new JPanel();
-		connectedUsersPanel.setBorder(Utilitities.addPadding(15,15,15,15));
-		connectedUsersPanel.setLayout(new BoxLayout(connectedUsersPanel , BoxLayout.Y_AXIS));
-		connectedUsersPanel.setBackground(Utilitities.SECOUNDARY_COLOR);
-		connectedUsersPanel.setPreferredSize(new Dimension(200 , getHeight()));
-		
-		JLabel connectedUsersLabel = new JLabel("Connected Users");
-		connectedUsersLabel.setFont(new Font("Inter" , Font.BOLD, 18));
-		connectedUsersLabel.setForeground(Utilitities.Text_Color);
-		connectedUsersPanel.add(connectedUsersLabel);
-		
-		add(connectedUsersPanel , BorderLayout.WEST);
-	}
-	private void addChatComponents() {
-		JPanel chatPanel = new JPanel();
-		chatPanel.setLayout(new BorderLayout());
-		chatPanel.setBackground(Utilitities.TRANSPARENT_COLOR);
-		
-		messagePanel = new JPanel();
-		messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
-		messagePanel.setBackground(Utilitities.TRANSPARENT_COLOR);
-		
-		messagePaneScrollPane = new JScrollPane(messagePanel);
-		messagePaneScrollPane.setBackground(Utilitities.TRANSPARENT_COLOR);
-		messagePaneScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-		messagePaneScrollPane.getVerticalScrollBar().setUnitIncrement(16);
-		messagePaneScrollPane.getViewport().addChangeListener(new ChangeListener() {
-			
-			@Override
-			public void stateChanged(ChangeEvent e) {
-				revalidate();
-				repaint();
-			}
-		});
-		chatPanel.add(messagePaneScrollPane,BorderLayout.CENTER);
-	
-		
-		JPanel inputPanel = new JPanel();
-		inputPanel.setBorder(Utilitities.addPadding(10,10,10,10));
-		inputPanel.setLayout(new BorderLayout());
-		inputPanel.setBackground(Utilitities.TRANSPARENT_COLOR);
+        setSize(1121, 685);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                int option = JOptionPane.showConfirmDialog(ClientGUI.this,
+                        "Do you really want to leave?",
+                        "Exit", JOptionPane.YES_NO_OPTION);
+                if (option == JOptionPane.YES_OPTION) {
+                    myStompClient.disconnectedUser(username);
+                    dispose();
+                }
+            }
+        });
 
-		FancyTextField inputField = new FancyTextField(30);
-		
-		inputField.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyTyped(KeyEvent e) {
-				if(e.getKeyChar() == KeyEvent.VK_ENTER) {
-					String input = inputField.getText();
-					
-					if(input.isEmpty()) {
-						JOptionPane.showMessageDialog(ClientGUI.this, "Please enter a message", "Error", JOptionPane.ERROR_MESSAGE);
-						return;
-					}
-					
-					inputField.setText("");
-					
-					
-					myStompClient.sendMessage(new Message(username , input));
-				}
-			}
-		});
-		
-		
-		inputField.setBackground(Utilitities.SECOUNDARY_COLOR);
-		inputField.setBorder(Utilitities.addPadding(0, 10, 0, 10));
-		inputField.setForeground(Utilitities.Text_Color);
-		inputField.setFont(new Font("Inter" , Font.ROMAN_BASELINE ,18 ));
-		inputField.setPreferredSize(new Dimension(inputPanel.getWidth() , 40));
-		
-		
-		inputPanel.add(inputField , BorderLayout.CENTER);
-		chatPanel.add(inputPanel, BorderLayout.SOUTH);
-		add(chatPanel,BorderLayout.CENTER);
-	}
-	
-	private JPanel createChatMessageComponent(Message message) {
-		JPanel chatMessage = new JPanel();
-		chatMessage.setBackground(Utilitities.TRANSPARENT_COLOR);
-		chatMessage.setLayout(new BoxLayout(chatMessage, BoxLayout.Y_AXIS));
-		chatMessage.setBorder(Utilitities.addPadding(10, 10, 10, 10));
-		
-		JLabel usernameLabel = new JLabel(message.getUser());
-		usernameLabel.setFont(new Font("Inter" , Font.BOLD , 18));
-		usernameLabel.setForeground(Utilitities.Text_Color);
-		chatMessage.add(usernameLabel);
-		
-		JLabel messageLabel = new JLabel();
-		messageLabel.setText("<html><body style='width:" + 
-			     (0.60 * getWidth()) + "px'>" + message.getMessage() + 
-			     "</body></html>");
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateMessageSize();
+            }
+        });
 
-		messageLabel.setFont(new Font("Inter" , Font.PLAIN , 18));
-		messageLabel.setForeground(Utilitities.Text_Color);
-		chatMessage.add(messageLabel);
-		
-		return chatMessage;
-		
-	}
+        getContentPane().setBackground(Utilities.PRIMARY_COLOR);
+        addGUIComponents();
+    }
 
-	@Override
-	public void onMessageReceive(Message message) {
-		messagePanel.add(createChatMessageComponent(message));
-		revalidate();
-		repaint();
-		
-		messagePaneScrollPane.getVerticalScrollBar().setValue(Integer.MAX_VALUE);
-	}
+    private void addGUIComponents() {
+        addConnectedUsersComponents();
+        addChatComponents();
+    }
 
-	@Override
-	public void onActiveUserUpdated(ArrayList<String> users) {
-		//remove the current user list panel 
-		if(connectedUsersPanel.getComponents().length >=2) {
-			connectedUsersPanel.remove(1);
-		}
-		
-		JPanel userListPanel = new JPanel();
-		userListPanel.setBackground(Utilitities.TRANSPARENT_COLOR);
-		userListPanel.setLayout(new BoxLayout(userListPanel, BoxLayout.Y_AXIS));
-		
-		for(String user : users) {
-			JLabel username = new JLabel();
-			username.setText(user);
-			username.setForeground(Utilitities.Text_Color);
-			username.setFont(new Font("Inter" , Font.BOLD , 16));
-			userListPanel.add(username);
-		}
-		
-		connectedUsersPanel.add(userListPanel);
-		revalidate();
-		repaint();
-	}
-	
-	 private void updateMessageSize(){
-	        for(int i = 0; i < messagePanel.getComponents().length; i++){
-	            Component component = messagePanel.getComponent(i);
-	            if(component instanceof JPanel){
-	                JPanel chatMessage = (JPanel) component;
-	                if(chatMessage.getComponent(1) instanceof JLabel){
-	                    JLabel messageLabel = (JLabel) chatMessage.getComponent(1);
-	                    messageLabel.setText("<html>" +
-	                            "<body style='width:" + (0.60 * getWidth()) + "'px>" +
-	                                messageLabel.getText() +
-	                            "</body>"+
-	                    "</html>");
-	                }
-	            }
-	        }
-	    }
+    private void addConnectedUsersComponents() {
+        connectedUsersPanel = new JPanel();
+        connectedUsersPanel.setBorder(Utilities.addPadding(15, 15, 15, 15));
+        connectedUsersPanel.setLayout(new BoxLayout(connectedUsersPanel, BoxLayout.Y_AXIS));
+        connectedUsersPanel.setBackground(Utilities.SECOUNDARY_COLOR);
+        connectedUsersPanel.setPreferredSize(new Dimension(200, getHeight()));
+
+        JLabel connectedUsersLabel = new JLabel("Connected Users");
+        connectedUsersLabel.setFont(Utilities.HEADER_FONT);
+        connectedUsersLabel.setForeground(Utilities.TEXT_COLOR);
+        connectedUsersPanel.add(connectedUsersLabel);
+
+        userListPanel = new JPanel();
+        userListPanel.setBackground(Utilities.TRANSPARENT_COLOR);
+        userListPanel.setLayout(new BoxLayout(userListPanel, BoxLayout.Y_AXIS));
+        connectedUsersPanel.add(userListPanel);
+
+        add(connectedUsersPanel, BorderLayout.WEST);
+    }
+
+    private void addChatComponents() {
+        JPanel chatPanel = new JPanel(new BorderLayout());
+        chatPanel.setBackground(Utilities.TRANSPARENT_COLOR);
+
+        messagePanel = new JPanel();
+        messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
+        messagePanel.setBackground(Utilities.TRANSPARENT_COLOR);
+
+        messagePaneScrollPane = new JScrollPane(messagePanel);
+        messagePaneScrollPane.setBackground(Utilities.TRANSPARENT_COLOR);
+        messagePaneScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        messagePaneScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        messagePaneScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        messagePaneScrollPane.getViewport().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                revalidate();
+                repaint();
+            }
+        });
+
+        chatPanel.add(messagePaneScrollPane, BorderLayout.CENTER);
+
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.setBorder(Utilities.addPadding(10, 10, 10, 10));
+        inputPanel.setBackground(Utilities.TRANSPARENT_COLOR);
+
+        FancyTextField inputField = new FancyTextField(30);
+        inputField.addActionListener(e -> {
+            String input = inputField.getText().trim();
+            if (input.isEmpty()) {
+                JOptionPane.showMessageDialog(ClientGUI.this, "Please enter a message", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            inputField.setText("");
+            myStompClient.sendMessage(new Message(username, input, LocalDateTime.now()));
+        });
+
+        inputField.setBackground(Utilities.SECOUNDARY_COLOR);
+        inputField.setBorder(Utilities.addPadding(0, 10, 0, 10));
+        inputField.setForeground(Utilities.TEXT_COLOR);
+        inputField.setFont(Utilities.INPUT_FONT);
+        inputField.setPreferredSize(new Dimension(inputPanel.getWidth(), 40));
+
+        inputPanel.add(inputField, BorderLayout.CENTER);
+        chatPanel.add(inputPanel, BorderLayout.SOUTH);
+        add(chatPanel, BorderLayout.CENTER);
+    }
+
+    private JPanel createChatMessageComponent(Message message) {
+        boolean isCurrentUser = message.getUser().equals(username);
+        int maxWidth = (int) (getWidth() * 0.5);
+
+        JLabel usernameLabel = new JLabel(message.getUser());
+        usernameLabel.setFont(new Font("Inter", Font.BOLD, 14));
+        usernameLabel.setForeground(Color.WHITE);
+
+        JLabel messageLabel = new JLabel();
+        messageLabel.setFont(new Font("Inter", Font.PLAIN, 14));
+        messageLabel.setForeground(Color.WHITE);
+
+        String rawText = message.getMessage();
+        messageLabel.putClientProperty("rawText", rawText);
+        messageLabel.setText("<html><body style='width:" + (maxWidth - 40) + "px'>" + rawText + "</body></html>");
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
+        JLabel timestamp = new JLabel(message.getTimestap().format(formatter));
+        timestamp.setFont(new Font("Inter", Font.PLAIN, 11));
+        timestamp.setForeground(new Color(200, 200, 200));
+        timestamp.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+
+        JPanel chatMessage = new JPanel();
+        chatMessage.setLayout(new BoxLayout(chatMessage, BoxLayout.Y_AXIS));
+        chatMessage.setBackground(isCurrentUser ? new Color(100, 149, 237) : new Color(60, 63, 65));
+        chatMessage.setOpaque(true);
+        chatMessage.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        chatMessage.setMaximumSize(new Dimension(maxWidth, Integer.MAX_VALUE));
+
+        chatMessage.add(usernameLabel);
+        chatMessage.add(messageLabel);
+        chatMessage.add(timestamp);
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        if (isCurrentUser) {
+            wrapper.add(chatMessage, BorderLayout.EAST);
+        } else {
+            wrapper.add(chatMessage, BorderLayout.WEST);
+        }
+
+        messagePanel = new JPanel();
+        messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
+
+        return wrapper;
+    }
+
+    @Override
+    public void onMessageReceive(Message message) {
+        SwingUtilities.invokeLater(() -> {
+            createChatMessageComponent(message);
+            revalidate();
+            repaint();
+            messagePaneScrollPane.getVerticalScrollBar().setValue(Integer.MAX_VALUE);
+        });
+    }
+
+    @Override
+    public void onActiveUserUpdated(ArrayList<String> users) {
+        SwingUtilities.invokeLater(() -> {
+            userListPanel.removeAll();
+            for (String user : users) {
+                JLabel userLabel = new JLabel(user);
+                userLabel.setForeground(Utilities.TEXT_COLOR);
+                userLabel.setFont(Utilities.USERNAME_FONT);
+                userListPanel.add(userLabel);
+            }
+            userListPanel.revalidate();
+            userListPanel.repaint();
+        });
+    }
+
+    private void updateMessageSize() {
+        int bubbleWidth = getWidth() / 2;
+        for (Component wrapper : messagePanel.getComponents()) {
+            if (wrapper instanceof JPanel) {
+                JPanel contentWrapper = (JPanel) wrapper;
+                if (contentWrapper.getComponentCount() > 0 && contentWrapper.getComponent(0) instanceof JPanel chatMessage) {
+                    for (Component c : chatMessage.getComponents()) {
+                        if (c instanceof JLabel label && label.getClientProperty("rawText") != null) {
+                            String rawText = (String) label.getClientProperty("rawText");
+                            label.setText("<html><div style='width: " + bubbleWidth + "px;'>" + rawText + "</div></html>");
+                        }
+                    }
+                }
+            }
+        }
+        messagePanel.revalidate();
+        messagePanel.repaint();
+    }
 }
