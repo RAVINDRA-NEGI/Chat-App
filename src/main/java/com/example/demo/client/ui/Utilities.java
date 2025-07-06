@@ -17,6 +17,7 @@ public class Utilities {
     public static final Color MUTED_TEXT_COLOR = new Color(170, 170, 170);    // #AAAAAA
     public static final Color ERROR_COLOR = new Color(255, 76, 76);           // #FF4C4C
     public static final Color TRANSPARENT_COLOR = new Color(0, 0, 0, 0);
+    public static final Color GREEN_COLOR= new Color(0, 200, 0);
     
     // 🖋️ Fonts
     public static final Font HEADER_FONT = new Font("Inter", Font.BOLD, 18);
