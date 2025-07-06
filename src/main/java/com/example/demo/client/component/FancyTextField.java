@@ -1,8 +1,8 @@
-package com.example.demo.client;
+package com.example.demo.client.component;
 
 import javax.swing.*;
 
-import com.example.demo.util.Utilities;
+import com.example.demo.client.ui.Utilities;
 
 import java.awt.*;
 

@@ -1,5 +1,8 @@
 package com.example.demo.client;
 
+import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.time.LocalDateTime;
@@ -7,13 +10,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-
+import com.example.demo.client.component.FancyTextField;
+import com.example.demo.client.ui.Utilities;
 import com.example.demo.model.Message;
 import com.example.demo.session.MessageListener;
-import com.example.demo.util.Utilities;
 
 public class ClientGUI extends JFrame implements MessageListener {
     private JPanel connectedUsersPanel, messagePanel, userListPanel;
@@ -126,24 +126,30 @@ public class ClientGUI extends JFrame implements MessageListener {
 
         inputPanel.add(inputField, BorderLayout.CENTER);
         chatPanel.add(inputPanel, BorderLayout.SOUTH);
-        add(chatPanel, BorderLayout.CENTER);
+        getContentPane().add(chatPanel, BorderLayout.CENTER);
     }
 
     private JPanel createChatMessageComponent(Message message) {
         boolean isCurrentUser = message.getUser().equals(username);
-        int maxWidth = (int) (getWidth() * 0.5);
+       
 
         JLabel usernameLabel = new JLabel(message.getUser());
         usernameLabel.setFont(new Font("Inter", Font.BOLD, 14));
         usernameLabel.setForeground(Color.WHITE);
 
         JLabel messageLabel = new JLabel();
-        messageLabel.setFont(new Font("Inter", Font.PLAIN, 14));
+        messageLabel.setFont(new Font("Inter", Font.PLAIN, 20));
         messageLabel.setForeground(Color.WHITE);
 
         String rawText = message.getMessage();
         messageLabel.putClientProperty("rawText", rawText);
-        messageLabel.setText("<html><body style='width:" + (maxWidth - 40) + "px'>" + rawText + "</body></html>");
+        
+        int vpWidth = messagePaneScrollPane.getViewport().getWidth();
+        int bubbleWidth = (int)(vpWidth * 0.6);
+        messageLabel.setText(String.format(
+            "<html><div style='width:%dpx;'>%s</div></html>",
+            bubbleWidth, rawText
+        ));
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
         JLabel timestamp = new JLabel(message.getTimestap().format(formatter));
@@ -153,10 +159,10 @@ public class ClientGUI extends JFrame implements MessageListener {
 
         JPanel chatMessage = new JPanel();
         chatMessage.setLayout(new BoxLayout(chatMessage, BoxLayout.Y_AXIS));
-        chatMessage.setBackground(isCurrentUser ? new Color(100, 149, 237) : new Color(60, 63, 65));
+        chatMessage.setBackground(isCurrentUser ? Utilities.FIRST_COLOR : Utilities.SECOND_COLOR );
         chatMessage.setOpaque(true);
         chatMessage.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        chatMessage.setMaximumSize(new Dimension(maxWidth, Integer.MAX_VALUE));
+        chatMessage.setMaximumSize(new Dimension(bubbleWidth + 24, Integer.MAX_VALUE));
 
         chatMessage.add(usernameLabel);
         chatMessage.add(messageLabel);
@@ -164,14 +170,18 @@ public class ClientGUI extends JFrame implements MessageListener {
 
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
+        wrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, chatMessage.getPreferredSize().height + 16));
+
         if (isCurrentUser) {
             wrapper.add(chatMessage, BorderLayout.EAST);
         } else {
             wrapper.add(chatMessage, BorderLayout.WEST);
         }
 
-        messagePanel = new JPanel();
-        messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
+
+        // Add to message list
+        messagePanel.add(wrapper);
+        messagePanel.add(Box.createVerticalStrut(10));
 
         return wrapper;
     }
@@ -202,21 +212,32 @@ public class ClientGUI extends JFrame implements MessageListener {
     }
 
     private void updateMessageSize() {
-        int bubbleWidth = getWidth() / 2;
-        for (Component wrapper : messagePanel.getComponents()) {
-            if (wrapper instanceof JPanel) {
-                JPanel contentWrapper = (JPanel) wrapper;
-                if (contentWrapper.getComponentCount() > 0 && contentWrapper.getComponent(0) instanceof JPanel chatMessage) {
-                    for (Component c : chatMessage.getComponents()) {
-                        if (c instanceof JLabel label && label.getClientProperty("rawText") != null) {
-                            String rawText = (String) label.getClientProperty("rawText");
-                            label.setText("<html><div style='width: " + bubbleWidth + "px;'>" + rawText + "</div></html>");
-                        }
+        int vpWidth = messagePaneScrollPane.getViewport().getWidth();
+        int bubbleWidth = (int)(vpWidth * 0.6);
+
+        for (Component comp : messagePanel.getComponents()) {
+            if (!(comp instanceof JPanel wrapper)) continue;
+
+            for (Component inner : wrapper.getComponents()) {
+                if (!(inner instanceof JPanel bubble)) continue;
+
+                // Resize each text label
+                for (Component c : bubble.getComponents()) {
+                    if (c instanceof JLabel lbl && lbl.getClientProperty("rawText") != null) {
+                        String raw = (String)lbl.getClientProperty("rawText");
+                        lbl.setText(String.format(
+                            "<html><div style='width:%dpx;'>%s</div></html>",
+                            bubbleWidth, raw
+                        ));
                     }
                 }
+                // Re-cap bubble width
+                bubble.setMaximumSize(new Dimension(bubbleWidth + 24, Integer.MAX_VALUE));
             }
         }
         messagePanel.revalidate();
         messagePanel.repaint();
     }
 }
+
+
