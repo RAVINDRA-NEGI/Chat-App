@@ -2,8 +2,9 @@ package com.example.demo.client.ui;
 
 import java.awt.Color;
 import java.awt.Font;
-import javax.swing.border.Border;
+
 import javax.swing.BorderFactory;
+import javax.swing.border.Border;
 
 public class Utilities {
 
@@ -28,5 +29,10 @@ public class Utilities {
     // 🧱 Padding utility
     public static Border addPadding(int top, int left, int bottom, int right) {
         return BorderFactory.createEmptyBorder(top, left, bottom, right);
-    }
+    }  
+    public static final double BUBBLE_WIDTH_RATIO = 0.6;
+    public static final int MAX_BUBBLE_WIDTH = 480; // px
+    public static final int MIN_BUBBLE_WIDTH = 200; // optional
+
+    
 }

@@ -1,14 +1,34 @@
 package com.example.demo.client;
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import com.example.demo.client.component.FancyTextField;
 import com.example.demo.client.component.RoundedPanel;
@@ -21,6 +41,7 @@ public class ClientGUI extends JFrame implements MessageListener {
     private MyStompClient myStompClient;
     private String username;
     private JScrollPane messagePaneScrollPane;
+    
 
     public ClientGUI(String username) throws InterruptedException, ExecutionException {
         super("User: " + username);
@@ -125,7 +146,7 @@ public class ClientGUI extends JFrame implements MessageListener {
 
         messagePaneScrollPane = new JScrollPane(messagePanel);
         messagePaneScrollPane.setBackground(Utilities.TRANSPARENT_COLOR);
-        messagePaneScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        messagePaneScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         messagePaneScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         messagePaneScrollPane.getVerticalScrollBar().setUnitIncrement(16);
         messagePaneScrollPane.getViewport().addChangeListener(new ChangeListener() {
@@ -184,6 +205,7 @@ public class ClientGUI extends JFrame implements MessageListener {
         JLabel usernameLabel = new JLabel(message.getUser());
         usernameLabel.setFont(new Font("Inter", Font.BOLD, 14));
         usernameLabel.setForeground(Color.WHITE);
+        usernameLabel.putClientProperty("rawText", message.getUser());
 
         // Message Text
         JTextArea messageText = new JTextArea(message.getMessage());
@@ -201,6 +223,7 @@ public class ClientGUI extends JFrame implements MessageListener {
         timestampLabel.setFont(new Font("Inter", Font.ITALIC, 11));
         timestampLabel.setForeground(new Color(180, 180, 180));
         timestampLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        timestampLabel.putClientProperty("rawText", message.getTimestap().format(formatter));
 
         // Bubble Panel
         RoundedPanel bubblePanel = new RoundedPanel(20);
@@ -216,7 +239,8 @@ public class ClientGUI extends JFrame implements MessageListener {
         bubblePanel.add(timestampLabel);
 
         int vpWidth = messagePaneScrollPane.getViewport().getWidth();
-        int bubbleWidth = (int) (vpWidth * 0.6);
+        int rawWidth = (int) (vpWidth * Utilities.BUBBLE_WIDTH_RATIO);
+        int bubbleWidth = Math.min(rawWidth, Utilities.MAX_BUBBLE_WIDTH);
         bubblePanel.setMaximumSize(new Dimension(bubbleWidth, Integer.MAX_VALUE));
 
         // Wrapper Panel for alignment
@@ -247,9 +271,19 @@ public class ClientGUI extends JFrame implements MessageListener {
             createChatMessageComponent(message);
             revalidate();
             repaint();
-            messagePaneScrollPane.getVerticalScrollBar().setValue(Integer.MAX_VALUE);
+
+            JScrollBar verticalBar = messagePaneScrollPane.getVerticalScrollBar();
+            int threshold = 50;
+
+            int current = verticalBar.getValue() + verticalBar.getVisibleAmount();
+            int max = verticalBar.getMaximum();
+
+            if ((max - current) < threshold) {
+                verticalBar.setValue(verticalBar.getMaximum());
+            }
         });
     }
+
 
     @Override
     public void onActiveUserUpdated(ArrayList<String> users) {
@@ -291,32 +325,46 @@ public class ClientGUI extends JFrame implements MessageListener {
 
 
     private void updateMessageSize() {
-        int vpWidth = messagePaneScrollPane.getViewport().getWidth();
-        int bubbleWidth = (int)(vpWidth * 0.6);
+    	int vpWidth = messagePaneScrollPane.getViewport().getWidth();
+    	int rawWidth = (int)(vpWidth * Utilities.BUBBLE_WIDTH_RATIO);
+    	int bubbleWidth = Math.min(rawWidth,Utilities.MAX_BUBBLE_WIDTH);
 
         for (Component comp : messagePanel.getComponents()) {
-            if (!(comp instanceof JPanel wrapper)) continue;
+            if (!(comp instanceof JPanel wrapper)) {
+				continue;
+			}
 
             for (Component inner : wrapper.getComponents()) {
-                if (!(inner instanceof JPanel bubble)) continue;
+                if (!(inner instanceof JPanel bubble)) {
+					continue;
+				}
 
-               
+                // Update label widths only if needed
                 for (Component c : bubble.getComponents()) {
                     if (c instanceof JLabel lbl && lbl.getClientProperty("rawText") != null) {
-                        String raw = (String)lbl.getClientProperty("rawText");
-                        lbl.setText(String.format(
-                            "<html><div style='width:%dpx;'>%s</div></html>",
-                            bubbleWidth, raw
-                        ));
+                        String raw = (String) lbl.getClientProperty("rawText");
+
+                        // Only apply HTML wrapping if the raw text is long
+                        if (raw.length() > 20) {
+                            lbl.setText(String.format(
+                                "<html><div style='width:%dpx;'>%s</div></html>",
+                                bubbleWidth, raw
+                            ));
+                        } else {
+                            lbl.setText(raw); // Keep plain text
+                        }
                     }
                 }
-                
+
+                // Update bubble width
                 bubble.setMaximumSize(new Dimension(bubbleWidth + 24, Integer.MAX_VALUE));
             }
         }
+
         messagePanel.revalidate();
         messagePanel.repaint();
     }
+
 }
 
 
