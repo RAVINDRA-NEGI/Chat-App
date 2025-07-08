@@ -8,31 +8,34 @@ import javax.swing.border.Border;
 
 public class Utilities {
 
-    // 🎨 Colors
-    public static final Color PRIMARY_COLOR = new Color(30, 30, 47);          // #1E1E2F
-    public static final Color SECOUNDARY_COLOR = new Color(46, 46, 62);       // #2E2E3E
-    public static final Color ACCENT_COLOR = new Color(78, 159, 61);          // #4E9F3D
-    public static final Color FIRST_COLOR = new Color(100, 149, 237);    // #FFCC00
-    public static final Color SECOND_COLOR = new Color(60, 63, 65);          // #FFA500
-    public static final Color TEXT_COLOR = new Color(255, 255, 255);          // #FFFFFF
-    public static final Color MUTED_TEXT_COLOR = new Color(170, 170, 170);    // #AAAAAA
-    public static final Color ERROR_COLOR = new Color(255, 76, 76);           // #FF4C4C
+    
+    public static final Color PRIMARY_COLOR = new Color(30, 30, 47);         
+    public static final Color SECONDARY_COLOR = new Color(46, 46, 62);     
+    public static final Color ACCENT_COLOR = new Color(78, 159, 61);          
+    public static final Color FIRST_COLOR = new Color(100, 149, 237);    
+    public static final Color SECOND_COLOR = new Color(60, 63, 65);          
+    public static final Color TEXT_COLOR = new Color(255, 255, 255);          
+    public static final Color MUTED_TEXT_COLOR = new Color(170, 170, 170);    
+    public static final Color ERROR_COLOR = new Color(255, 76, 76);           
     public static final Color TRANSPARENT_COLOR = new Color(0, 0, 0, 0);
     public static final Color GREEN_COLOR= new Color(0, 200, 0);
+    public static final Color GREY_COLOR= new Color(180, 180, 180);
+    public static final Color SEMI_TRASNPARENT= new Color(0, 0, 0, 30);
+   
     
-    // 🖋️ Fonts
+ 
     public static final Font HEADER_FONT = new Font("Inter", Font.BOLD, 18);
     public static final Font MESSAGE_FONT = new Font("Inter", Font.PLAIN, 18);
     public static final Font INPUT_FONT = new Font("Inter", Font.ROMAN_BASELINE, 18);
     public static final Font USERNAME_FONT = new Font("Inter", Font.BOLD, 16);
 
-    // 🧱 Padding utility
+   
     public static Border addPadding(int top, int left, int bottom, int right) {
         return BorderFactory.createEmptyBorder(top, left, bottom, right);
     }  
     public static final double BUBBLE_WIDTH_RATIO = 0.6;
-    public static final int MAX_BUBBLE_WIDTH = 480; // px
-    public static final int MIN_BUBBLE_WIDTH = 200; // optional
+    public static final int MAX_BUBBLE_WIDTH = 480; 
+    public static final int MIN_BUBBLE_WIDTH = 200; 
 
     
 }

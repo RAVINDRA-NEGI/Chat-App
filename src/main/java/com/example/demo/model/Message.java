@@ -12,5 +12,5 @@ import lombok.NoArgsConstructor;
 public class Message {
 	 private String user;
 	 private String message;
-	 private LocalDateTime timestap;
+	 private LocalDateTime timestamp;
 }

@@ -31,14 +31,16 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import com.example.demo.client.component.FancyTextField;
+import com.example.demo.client.component.RoundedButton;
 import com.example.demo.client.component.RoundedPanel;
+import com.example.demo.client.controller.ClientController;
 import com.example.demo.client.ui.Utilities;
 import com.example.demo.model.Message;
 import com.example.demo.session.MessageListener;
 
 public class ClientGUI extends JFrame implements MessageListener {
     private JPanel connectedUsersPanel, messagePanel, userListPanel;
-    private MyStompClient myStompClient;
+    private ClientController clientController;
     private String username;
     private JScrollPane messagePaneScrollPane;
     
@@ -46,7 +48,7 @@ public class ClientGUI extends JFrame implements MessageListener {
     public ClientGUI(String username) throws InterruptedException, ExecutionException {
         super("User: " + username);
         this.username = username;
-        myStompClient = new MyStompClient(this, username);
+        clientController = new ClientController(this, username);
 
         setSize(1121, 685);
         setLocationRelativeTo(null);
@@ -59,7 +61,7 @@ public class ClientGUI extends JFrame implements MessageListener {
                         "Do you really want to leave?",
                         "Exit", JOptionPane.YES_NO_OPTION);
                 if (option == JOptionPane.YES_OPTION) {
-                    myStompClient.disconnectedUser(username);
+                    clientController.disconnect(username);
                     dispose();
                 }
             }
@@ -102,13 +104,13 @@ public class ClientGUI extends JFrame implements MessageListener {
         topPanel.add(toggleSidebarBtn);
         getContentPane().add(topPanel, BorderLayout.NORTH);
 
-        // === SIDEBAR PANEL ===
+        
         connectedUsersPanel = new JPanel(new BorderLayout());
         connectedUsersPanel.setBorder(Utilities.addPadding(15, 15, 15, 15));
-        connectedUsersPanel.setBackground(Utilities.SECOUNDARY_COLOR);
+        connectedUsersPanel.setBackground(Utilities.SECONDARY_COLOR);
         connectedUsersPanel.setPreferredSize(new Dimension(200, getHeight()));
 
-        // Header
+       
         JLabel connectedUsersLabel = new JLabel("Connected Users");
         connectedUsersLabel.setFont(Utilities.HEADER_FONT);
         connectedUsersLabel.setForeground(Utilities.TEXT_COLOR);
@@ -119,7 +121,7 @@ public class ClientGUI extends JFrame implements MessageListener {
 
         connectedUsersPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // === USER LIST (INSIDE SCROLL PANE) ===
+      
         userListPanel = new JPanel();
         userListPanel.setBackground(Utilities.TRANSPARENT_COLOR);
         userListPanel.setLayout(new BoxLayout(userListPanel, BoxLayout.Y_AXIS));
@@ -128,7 +130,7 @@ public class ClientGUI extends JFrame implements MessageListener {
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(10); // smooth scrolling
+        scrollPane.getVerticalScrollBar().setUnitIncrement(10); 
 
         connectedUsersPanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -163,51 +165,61 @@ public class ClientGUI extends JFrame implements MessageListener {
         inputPanel.setBorder(Utilities.addPadding(10, 10, 10, 10));
         inputPanel.setBackground(Utilities.TRANSPARENT_COLOR);
 
-        FancyTextField inputField = new FancyTextField(30);
-        inputField.addActionListener(e -> {
-            String input = inputField.getText().trim();
+	    FancyTextField inputField = new FancyTextField(30);
+	
+	     
+	     Runnable sendMessage = () -> {
+	         String input = inputField.getText().trim();
+	
+	         if (input.isEmpty()) {
+	             return;
+	         }
+	
+	         if (input.length() > 1000) {
+	             JOptionPane.showMessageDialog(ClientGUI.this, "Message too long. Please keep it under 1000 characters.", "Error", JOptionPane.ERROR_MESSAGE);
+	             return;
+	         }
+	
+	         if (!clientController.isConnected()) {
+	             JOptionPane.showMessageDialog(ClientGUI.this, "Connection lost. Please reconnect or restart the app.", "Connection Error", JOptionPane.ERROR_MESSAGE);
+	             return;
+	         }
+	
+	         inputField.setText("");
+	         clientController.sendMessage(new Message(username, input, LocalDateTime.now()));
+	     };
+	     
+	     inputField.addActionListener(e -> sendMessage.run());
 
-            if (input.isEmpty()) {
-                JOptionPane.showMessageDialog(ClientGUI.this, "Please enter a message", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+	     
+	     JButton sendButton = RoundedButton.makeRoundedButton("➤", 30);
+	     sendButton.setBackground(Utilities.SECONDARY_COLOR); 
+	     sendButton.setForeground(Utilities.TEXT_COLOR);
+	     sendButton.addActionListener(e -> sendMessage.run());
 
-            if (input.length() > 1000) {
-                JOptionPane.showMessageDialog(ClientGUI.this, "Message too long. Please keep it under 1000 characters.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+	     
+	     JPanel fieldWithButton = new JPanel(new BorderLayout());
+	     fieldWithButton.setOpaque(false);
+	     fieldWithButton.add(inputField, BorderLayout.CENTER);
+	     fieldWithButton.add(sendButton, BorderLayout.EAST);
 
-            if (!myStompClient.isConnected()) {
-                JOptionPane.showMessageDialog(ClientGUI.this, "Connection lost. Please reconnect or restart the app.", "Connection Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+	   
+	     inputPanel.add(fieldWithButton, BorderLayout.CENTER);
+	     chatPanel.add(inputPanel, BorderLayout.SOUTH);
+	     getContentPane().add(chatPanel, BorderLayout.CENTER);
+	
+	    }
 
-            inputField.setText("");
-            myStompClient.sendMessage(new Message(username, input, LocalDateTime.now()));
-        });
-
-
-        inputField.setBackground(Utilities.SECOUNDARY_COLOR);
-        inputField.setBorder(Utilities.addPadding(0, 10, 0, 10));
-        inputField.setForeground(Utilities.TEXT_COLOR);
-        inputField.setFont(Utilities.INPUT_FONT);
-        inputField.setPreferredSize(new Dimension(inputPanel.getWidth(), 40));
-
-        inputPanel.add(inputField, BorderLayout.CENTER);
-        chatPanel.add(inputPanel, BorderLayout.SOUTH);
-        getContentPane().add(chatPanel, BorderLayout.CENTER);
-    }
-
-    private JPanel createChatMessageComponent(Message message) {
+    private JPanel buildMessageBubble(Message message) {
         boolean isCurrentUser = message.getUser().equals(username);
 
-        // Username Label
+        
         JLabel usernameLabel = new JLabel(message.getUser());
         usernameLabel.setFont(new Font("Inter", Font.BOLD, 14));
         usernameLabel.setForeground(Color.WHITE);
         usernameLabel.putClientProperty("rawText", message.getUser());
 
-        // Message Text
+        
         JTextArea messageText = new JTextArea(message.getMessage());
         messageText.setFont(new Font("Inter", Font.PLAIN, 16));
         messageText.setForeground(Color.WHITE);
@@ -217,20 +229,20 @@ public class ClientGUI extends JFrame implements MessageListener {
         messageText.setWrapStyleWord(true);
         messageText.setBorder(null);
 
-        // Timestamp Label
+       
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("hh:mm a");
-        JLabel timestampLabel = new JLabel(message.getTimestap().format(formatter));
+        JLabel timestampLabel = new JLabel(message.getTimestamp().format(formatter));
         timestampLabel.setFont(new Font("Inter", Font.ITALIC, 11));
-        timestampLabel.setForeground(new Color(180, 180, 180));
+        timestampLabel.setForeground(Utilities.GREY_COLOR);
         timestampLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
-        timestampLabel.putClientProperty("rawText", message.getTimestap().format(formatter));
+        timestampLabel.putClientProperty("rawText", message.getTimestamp().format(formatter));
 
-        // Bubble Panel
-        RoundedPanel bubblePanel = new RoundedPanel(20);
+        
+        RoundedPanel bubblePanel = new RoundedPanel(70);
         bubblePanel.setLayout(new BoxLayout(bubblePanel, BoxLayout.Y_AXIS));
         bubblePanel.setBackground(isCurrentUser ? Utilities.FIRST_COLOR : Utilities.SECOND_COLOR);
-        bubblePanel.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        bubblePanel.setOpaque(false); // Optional if RoundedPanel handles background
+        bubblePanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        bubblePanel.setOpaque(false);
 
         bubblePanel.add(usernameLabel);
         bubblePanel.add(Box.createVerticalStrut(5));
@@ -243,7 +255,7 @@ public class ClientGUI extends JFrame implements MessageListener {
         int bubbleWidth = Math.min(rawWidth, Utilities.MAX_BUBBLE_WIDTH);
         bubblePanel.setMaximumSize(new Dimension(bubbleWidth, Integer.MAX_VALUE));
 
-        // Wrapper Panel for alignment
+       
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.X_AXIS));
         wrapper.setOpaque(false);
@@ -257,7 +269,7 @@ public class ClientGUI extends JFrame implements MessageListener {
             wrapper.add(Box.createHorizontalGlue());
         }
 
-        // Add to messagePanel
+        
         messagePanel.add(wrapper);
         messagePanel.add(Box.createVerticalStrut(10));
 
@@ -268,7 +280,7 @@ public class ClientGUI extends JFrame implements MessageListener {
     @Override
     public void onMessageReceive(Message message) {
         SwingUtilities.invokeLater(() -> {
-            createChatMessageComponent(message);
+        	buildMessageBubble(message);
             revalidate();
             repaint();
 
@@ -291,21 +303,21 @@ public class ClientGUI extends JFrame implements MessageListener {
             userListPanel.removeAll();
 
             for (String user : users) {
-                JPanel userRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)); // 5px horizontal, 0px vertical gap
+                JPanel userRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)); 
                 userRow.setOpaque(false);
 
                 userRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-                userRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20)); // Set max height
+                userRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20)); 
 
                 
-                userRow.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0)); // optional 2px vertical spacing
+                userRow.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
-                // Green dot
-                JLabel greenDot = new JLabel("\u2B24"); // Unicode for ●
-                greenDot.setFont(new Font("Dialog", Font.PLAIN, 10));    // Small size
-                greenDot.setForeground(Utilities.GREEN_COLOR);             // Green color
+                
+                JLabel greenDot = new JLabel("\u2B24"); 
+                greenDot.setFont(new Font("Dialog", Font.PLAIN, 10));   
+                greenDot.setForeground(Utilities.GREEN_COLOR);             
 
-                // Username
+                
                 JLabel userLabel = new JLabel(user);
                 userLabel.setForeground(Utilities.TEXT_COLOR);
                 userLabel.setFont(Utilities.USERNAME_FONT);
@@ -339,24 +351,24 @@ public class ClientGUI extends JFrame implements MessageListener {
 					continue;
 				}
 
-                // Update label widths only if needed
+             
                 for (Component c : bubble.getComponents()) {
                     if (c instanceof JLabel lbl && lbl.getClientProperty("rawText") != null) {
                         String raw = (String) lbl.getClientProperty("rawText");
 
-                        // Only apply HTML wrapping if the raw text is long
+                      
                         if (raw.length() > 20) {
                             lbl.setText(String.format(
                                 "<html><div style='width:%dpx;'>%s</div></html>",
                                 bubbleWidth, raw
                             ));
                         } else {
-                            lbl.setText(raw); // Keep plain text
+                            lbl.setText(raw); 
                         }
                     }
                 }
 
-                // Update bubble width
+               
                 bubble.setMaximumSize(new Dimension(bubbleWidth + 24, Integer.MAX_VALUE));
             }
         }
@@ -366,5 +378,4 @@ public class ClientGUI extends JFrame implements MessageListener {
     }
 
 }
-
 
