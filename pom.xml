@@ -89,6 +89,19 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			    <plugin>
+			      <groupId>com.google.cloud.tools</groupId>
+			      <artifactId>jib-maven-plugin</artifactId>
+			      <version>3.4.5</version>
+			      <configuration>
+			        <container>
+			          <mainClass>com.example.demo.WebsocketApplication</mainClass>
+			        </container>
+			        <to>
+			          <image>raznegi69/websocket:v1</image>
+			        </to>
+			      </configuration>
+			    </plugin>
 		</plugins>
 	</build>
 
